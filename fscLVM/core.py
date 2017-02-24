@@ -375,9 +375,13 @@ class CSparseFA(AExpressionModule):
         #update C and W 
         
         u_qm = logPi + 0.5*SP.log(sigma2Sigmaw) - 0.5*SP.log(SmTSmSig) + (0.5*self.Eps.E1)*((diff**2)/SmTSmSig)
-        self.W.C[:, m,0] = 1./(1+SP.exp(-u_qm))
-
-        self.W.C[:,m,1] = 1-self.W.C[:,m,0]
+        # self.W.C[:, m,0] = 1./(1+SP.exp(-u_qm))
+        u_qm = u_qm.astype('float')
+        u_qm_mod = 1./(1+SP.exp(-u_qm))
+        assert_all_finite(u_qm_mod)
+        u_qm_mod = u_qm_mod.astype('dobject')
+        #self.W.C[:,m,1] = 1-self.W.C[:,m,0]
+        self.W.C[:,m,1] = u_qm_mod
         self.W.E1[:, m] = (diff/SmTSmSig)                                #q(w_qm | s_qm=1), q=1,...,Q
         self.W.sigma2[:, m] = (1./self.Eps.E1)/SmTSmSig
         self.W.E2diag[:,m] = self.W.E1[:,m]**2 + self.W.sigma2[:,m] 
@@ -710,6 +714,17 @@ class CSparseFA(AExpressionModule):
     #calculate the variational bound:
     def calcBound(self):
         print('Currently not implemented ')
+
+    def assert_all_finite(X):
+    """Like assert_all_finite, but only for ndarray."""
+    X = np.asanyarray(X)
+    # First try an O(n) time, O(1) space solution for the common case that
+    # everything is finite; fall back to O(n) space np.isfinite to prevent
+    # false positives from overflow in sum method.
+    if (X.dtype.char in np.typecodes['AllFloat'] and not np.isfinite(X.sum())
+            and not np.isfinite(X).all()):
+        raise ValueError("Input contains NaN, infinity"
+                         " or a value too large for %r." % X.dtype)
 
 
 
